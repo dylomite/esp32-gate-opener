@@ -17,7 +17,8 @@ BLECharacteristic bleCharacteristic(CHARACTERISTIC_UUID, BLECharacteristic::PROP
 BLEDescriptor bleDescriptor(BLEUUID((uint16_t)0x2902));
 
 const byte PIN_GPIO_CONN_LED = 2;
-const byte PIN_GPIO_SIGNAL = 5;
+const byte PIN_GPIO_CHANNEL_A = 4;
+const byte PIN_GPIO_CHANNEL_B = 5;
 
 //Setup BLEServerCallbacks
 class ServerCallbacks: public BLEServerCallbacks {
@@ -46,9 +47,12 @@ void setup() {
   // Start serial communication 
   Serial.begin(19200);
   pinMode(PIN_GPIO_CONN_LED, OUTPUT);
-  pinMode(PIN_GPIO_SIGNAL, OUTPUT);
+  pinMode(PIN_GPIO_CHANNEL_A, OUTPUT);
+  pinMode(PIN_GPIO_CHANNEL_B, OUTPUT);
   setupBleServer();
   digitalWrite(PIN_GPIO_CONN_LED, LOW); 
+  digitalWrite(PIN_GPIO_CHANNEL_A, LOW);
+  digitalWrite(PIN_GPIO_CHANNEL_B, LOW);
 }
 
 void loop() {
@@ -107,7 +111,7 @@ void onValueReceived(std::string value){
   if(readValue == "1"){
      ledvibOutput = HIGH;
   }
-  digitalWrite(PIN_GPIO_SIGNAL, ledvibOutput); 
+  digitalWrite(PIN_GPIO_CHANNEL_A, ledvibOutput); 
   
   pCharacteristic->notify();
 }
