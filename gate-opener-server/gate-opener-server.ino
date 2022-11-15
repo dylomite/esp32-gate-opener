@@ -4,7 +4,7 @@
 
 // https://github.com/espressif/arduino-esp32/issues/6329
 
-#define bleServerName "BLE_SRV_ESP32"  // TODO: CHANGE NAME
+#define bleServerName "ESP32 Gate Opener BtServer"
 #define SERVICE_UUID "bc5d00ca-badf-4244-ae11-4a8f73fd409f"
 #define CHARACTERISTIC_UUID_CHANNEL_A "1dd23185-5d48-457c-a5e4-0f21afed2e58"
 #define CHARACTERISTIC_UUID_CHANNEL_B "04889dda-9528-45fb-ac11-f522997afb0b"
@@ -14,7 +14,6 @@ unsigned long timerDelay = 250;       // ms
 unsigned long ledBlinkingDelay = 80;  // ms
 bool deviceConnected = false;
 bool isAdvertising = false;
-const char currActiveChannel = null;
 
 const byte PIN_GPIO_CONN_LED = 2;
 const byte PIN_GPIO_CHANNEL_A = 4;
@@ -38,13 +37,9 @@ class ServerCallbacks : public BLEServerCallbacks {
     }
 };
 
-//TODO: RM THIS
-BLEServer* pServer;
-BLEService* pService;
 BLECharacteristic* pCharacteristic;
 
 void setup() {
-    // Start serial communication
     Serial.begin(19200);
     pinMode(PIN_GPIO_CONN_LED, OUTPUT);
     pinMode(PIN_GPIO_CHANNEL_A, OUTPUT);
@@ -68,8 +63,10 @@ void loop() {
 }
 
 void setupBleServer() {
-    // Create the BLE Device
     BLEDevice::init(bleServerName);
+
+    BLEServer* pServer;
+    BLEService* pService;
 
     pServer = BLEDevice::createServer();
     pServer->setCallbacks(new ServerCallbacks());
@@ -77,12 +74,10 @@ void setupBleServer() {
     pService = pServer->createService(SERVICE_UUID);
     pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_A, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
 
-    pCharacteristic->setValue("");
+    pCharacteristic->setValue("0");
     pService->start();
 
     setupBleAdvertising();
-
-    Serial.println("Characteristic defined! Now you can read it in the Client!");
 }
 
 void setupBleAdvertising() {
