@@ -8,9 +8,11 @@
 #define SERVICE_UUID "bc5d00ca-badf-4244-ae11-4a8f73fd409f"
 #define CHARACTERISTIC_UUID_CHANNEL_A "1dd23185-5d48-457c-a5e4-0f21afed2e58"
 #define CHARACTERISTIC_UUID_CHANNEL_B "04889dda-9528-45fb-ac11-f522997afb0b"
+#define CHARACTERISTIC_VALUE_LOW "0"
+#define CHARACTERISTIC_VALUE_HIGH "1"
 
-unsigned long lastTime = 0;
-unsigned long timerDelay = 250;       // ms
+unsigned long lastTimeRead = 0;       // ms
+unsigned long readValuesDelta = 250;  // ms
 unsigned long ledBlinkingDelay = 80;  // ms
 bool deviceConnected = false;
 bool isAdvertising = false;
@@ -37,7 +39,8 @@ class ServerCallbacks : public BLEServerCallbacks {
     }
 };
 
-BLECharacteristic* pCharacteristic;
+BLECharacteristic* pCharacteristicA;
+BLECharacteristic* pCharacteristicB;
 
 void setup() {
     Serial.begin(19200);
@@ -52,10 +55,11 @@ void setup() {
 
 void loop() {
     if (deviceConnected) {
-        if ((millis() - lastTime) > timerDelay) {
-            std::string value = pCharacteristic->getValue();
-            onValueReceived(value);
-            lastTime = millis();
+        if ((millis() - lastTimeRead) > readValuesDelta) {
+            std::string valueA = pCharacteristicA->getValue();
+            std::string valueB = pCharacteristicB->getValue();
+            onReadValues(valueA, valueB);
+            lastTimeRead = millis();
         }
     } else if (isAdvertising) {
         onAdvertising();
@@ -72,9 +76,10 @@ void setupBleServer() {
     pServer->setCallbacks(new ServerCallbacks());
 
     pService = pServer->createService(SERVICE_UUID);
-    pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_A, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-
-    pCharacteristic->setValue("0");
+    pCharacteristicA = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_A, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+    pCharacteristicA->setValue(CHARACTERISTIC_VALUE_LOW);
+    pCharacteristicB = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_B, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+    pCharacteristicB->setValue(CHARACTERISTIC_VALUE_LOW);
     pService->start();
 
     setupBleAdvertising();
@@ -97,16 +102,29 @@ void onAdvertising() {
     digitalWrite(PIN_GPIO_CONN_LED, HIGH);
 }
 
-void onValueReceived(std::string value) {
-    String readValue = value.c_str();
-    Serial.print("readValue ==> ");
-    Serial.println(readValue);
+// TODO: avoid str convert!
+void onReadValues(std::string valueA, std::string valueB) {
+    String valueAStr = valueA.c_str();
+    String valueBStr = valueB.c_str();
 
-    byte ledvibOutput = LOW;
-    if (readValue == "1") {
-        ledvibOutput = HIGH;
+    Serial.print("valueA = ");
+    Serial.print(valueAStr);
+    Serial.print(" valueB = ");
+    Serial.println(valueBStr);
+
+    byte outputA = getPinOutput(valueAStr);
+    byte outputB = getPinOutput(valueBStr);
+
+    digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
+    pCharacteristicA->notify();
+    digitalWrite(PIN_GPIO_CHANNEL_B, outputB);
+    pCharacteristicB->notify();
+}
+
+byte getPinOutput(String characteristicValue) {
+    byte output = LOW;
+    if (characteristicValue == CHARACTERISTIC_VALUE_HIGH) {
+        output = HIGH;
     }
-    digitalWrite(PIN_GPIO_CHANNEL_A, ledvibOutput);
-
-    pCharacteristic->notify();
+    return output;
 }
