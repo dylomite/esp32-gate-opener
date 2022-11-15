@@ -2,8 +2,6 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 
-// https://github.com/espressif/arduino-esp32/issues/6329
-
 #define bleServerName "ESP32 Gate Opener BtServer"
 #define SERVICE_UUID "bc5d00ca-badf-4244-ae11-4a8f73fd409f"
 #define CHARACTERISTIC_UUID_CHANNEL_A "1dd23185-5d48-457c-a5e4-0f21afed2e58"
@@ -13,7 +11,7 @@
 
 const byte PIN_GPIO_CONN_LED = 2;
 const byte PIN_GPIO_CHANNEL_A = 4;
-const byte PIN_GPIO_CHANNEL_B = 5;
+const byte PIN_GPIO_CHANNEL_B = 18;
 
 unsigned long lastTimeRead = 0;       // ms
 unsigned long readValuesDelta = 250;  // ms
