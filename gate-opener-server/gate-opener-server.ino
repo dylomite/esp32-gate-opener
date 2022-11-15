@@ -11,33 +11,15 @@
 #define CHARACTERISTIC_VALUE_LOW "0"
 #define CHARACTERISTIC_VALUE_HIGH "1"
 
+const byte PIN_GPIO_CONN_LED = 2;
+const byte PIN_GPIO_CHANNEL_A = 4;
+const byte PIN_GPIO_CHANNEL_B = 5;
+
 unsigned long lastTimeRead = 0;       // ms
 unsigned long readValuesDelta = 250;  // ms
 unsigned long ledBlinkingDelay = 80;  // ms
 bool deviceConnected = false;
 bool isAdvertising = false;
-
-const byte PIN_GPIO_CONN_LED = 2;
-const byte PIN_GPIO_CHANNEL_A = 4;
-const byte PIN_GPIO_CHANNEL_B = 5;
-
-// Setup BLEServerCallbacks
-class ServerCallbacks : public BLEServerCallbacks {
-    void onConnect(BLEServer* pServer) {
-        Serial.println("Device Connected!");
-        deviceConnected = true;
-        isAdvertising = false;
-        pServer->getAdvertising()->stop();
-        digitalWrite(PIN_GPIO_CONN_LED, HIGH);
-    };
-    void onDisconnect(BLEServer* pServer) {
-        Serial.println("Device Disonnected!");
-        deviceConnected = false;
-        digitalWrite(PIN_GPIO_CONN_LED, LOW);
-        pServer->getAdvertising()->start();
-        isAdvertising = true;
-    }
-};
 
 BLECharacteristic* pCharacteristicA;
 BLECharacteristic* pCharacteristicB;
@@ -49,8 +31,7 @@ void setup() {
     pinMode(PIN_GPIO_CHANNEL_B, OUTPUT);
     setupBleServer();
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
-    digitalWrite(PIN_GPIO_CHANNEL_A, LOW);
-    digitalWrite(PIN_GPIO_CHANNEL_B, LOW);
+    setGpioValues(CHARACTERISTIC_VALUE_LOW, CHARACTERISTIC_VALUE_LOW);
 }
 
 void loop() {
@@ -58,31 +39,12 @@ void loop() {
         if ((millis() - lastTimeRead) > readValuesDelta) {
             std::string valueA = pCharacteristicA->getValue();
             std::string valueB = pCharacteristicB->getValue();
-            onReadValues(valueA, valueB);
+            setupOutputAndNotify(valueA, valueB);
             lastTimeRead = millis();
         }
     } else if (isAdvertising) {
         onAdvertising();
     }
-}
-
-void setupBleServer() {
-    BLEDevice::init(bleServerName);
-
-    BLEServer* pServer;
-    BLEService* pService;
-
-    pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new ServerCallbacks());
-
-    pService = pServer->createService(SERVICE_UUID);
-    pCharacteristicA = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_A, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-    pCharacteristicA->setValue(CHARACTERISTIC_VALUE_LOW);
-    pCharacteristicB = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_B, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-    pCharacteristicB->setValue(CHARACTERISTIC_VALUE_LOW);
-    pService->start();
-
-    setupBleAdvertising();
 }
 
 void setupBleAdvertising() {
@@ -102,8 +64,14 @@ void onAdvertising() {
     digitalWrite(PIN_GPIO_CONN_LED, HIGH);
 }
 
+void setupOutputAndNotify(std::string valueA, std::string valueB) {
+    setGpioValues(valueA, valueB);
+    pCharacteristicA->notify();
+    pCharacteristicB->notify();
+}
+
 // TODO: avoid str convert!
-void onReadValues(std::string valueA, std::string valueB) {
+void setGpioValues(std::string valueA, std::string valueB) {
     String valueAStr = valueA.c_str();
     String valueBStr = valueB.c_str();
 
@@ -116,9 +84,7 @@ void onReadValues(std::string valueA, std::string valueB) {
     byte outputB = getPinOutput(valueBStr);
 
     digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
-    pCharacteristicA->notify();
     digitalWrite(PIN_GPIO_CHANNEL_B, outputB);
-    pCharacteristicB->notify();
 }
 
 byte getPinOutput(String characteristicValue) {
@@ -127,4 +93,42 @@ byte getPinOutput(String characteristicValue) {
         output = HIGH;
     }
     return output;
+}
+
+// Setup BLEServerCallbacks
+class ServerCallbacks : public BLEServerCallbacks {
+    void onConnect(BLEServer* pServer) {
+        Serial.println("Device Connected!");
+        deviceConnected = true;
+        isAdvertising = false;
+        pServer->getAdvertising()->stop();
+        digitalWrite(PIN_GPIO_CONN_LED, HIGH);
+    };
+    void onDisconnect(BLEServer* pServer) {
+        Serial.println("Device Disonnected!");
+        deviceConnected = false;
+        digitalWrite(PIN_GPIO_CONN_LED, LOW);
+        setGpioValues(CHARACTERISTIC_VALUE_LOW, CHARACTERISTIC_VALUE_LOW);
+        pServer->getAdvertising()->start();
+        isAdvertising = true;
+    }
+};
+
+void setupBleServer() {
+    BLEDevice::init(bleServerName);
+
+    BLEServer* pServer;
+    BLEService* pService;
+
+    pServer = BLEDevice::createServer();
+    pServer->setCallbacks(new ServerCallbacks());
+
+    pService = pServer->createService(SERVICE_UUID);
+    pCharacteristicA = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_A, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+    pCharacteristicA->setValue(CHARACTERISTIC_VALUE_LOW);
+    pCharacteristicB = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_B, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
+    pCharacteristicB->setValue(CHARACTERISTIC_VALUE_LOW);
+    pService->start();
+
+    setupBleAdvertising();
 }
