@@ -2,6 +2,9 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 
+#define PIN_GPIO_CONN_LED 2
+#define PIN_GPIO_CHANNEL_A 4
+#define PIN_GPIO_CHANNEL_B 18
 #define bleServerName "ESP32 Gate Opener BtServer"
 #define SERVICE_UUID "bc5d00ca-badf-4244-ae11-4a8f73fd409f"
 #define CHARACTERISTIC_UUID_CHANNEL_A "1dd23185-5d48-457c-a5e4-0f21afed2e58"
@@ -10,10 +13,6 @@
 #define CHARACTERISTIC_VALUE_HIGH "1"
 #define DELTA_TIME_CONN_LED_BLINK 80
 #define DELTA_TIME_MS 250
-
-const byte PIN_GPIO_CONN_LED = 2;
-const byte PIN_GPIO_CHANNEL_A = 4;
-const byte PIN_GPIO_CHANNEL_B = 18;
 
 unsigned long lastTimeRead = 0;  // ms
 bool deviceConnected = false;
