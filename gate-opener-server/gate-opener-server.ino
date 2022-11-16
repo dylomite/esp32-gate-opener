@@ -8,14 +8,14 @@
 #define CHARACTERISTIC_UUID_CHANNEL_B "04889dda-9528-45fb-ac11-f522997afb0b"
 #define CHARACTERISTIC_VALUE_LOW "0"
 #define CHARACTERISTIC_VALUE_HIGH "1"
+#define DELTA_TIME_CONN_LED_BLINK 80
+#define DELTA_TIME_MS 250
 
 const byte PIN_GPIO_CONN_LED = 2;
 const byte PIN_GPIO_CHANNEL_A = 4;
 const byte PIN_GPIO_CHANNEL_B = 18;
 
-unsigned long lastTimeRead = 0;       // ms
-unsigned long readValuesDelta = 250;  // ms
-unsigned long ledBlinkingDelay = 80;  // ms
+unsigned long lastTimeRead = 0;  // ms
 bool deviceConnected = false;
 bool isAdvertising = false;
 
@@ -34,7 +34,7 @@ void setup() {
 
 void loop() {
     if (deviceConnected) {
-        if ((millis() - lastTimeRead) > readValuesDelta) {
+        if ((millis() - lastTimeRead) > DELTA_TIME_MS) {
             std::string valueA = pCharacteristicA->getValue();
             std::string valueB = pCharacteristicB->getValue();
             setupOutputAndNotify(valueA, valueB);
@@ -56,9 +56,9 @@ void setupBleAdvertising() {
 }
 
 void onAdvertising() {
-    delay(ledBlinkingDelay);
+    delay(DELTA_TIME_CONN_LED_BLINK);
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
-    delay(ledBlinkingDelay);
+    delay(DELTA_TIME_CONN_LED_BLINK);
     digitalWrite(PIN_GPIO_CONN_LED, HIGH);
 }
 
