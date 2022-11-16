@@ -5,16 +5,16 @@
 #define PIN_GPIO_CONN_LED 2
 #define PIN_GPIO_CHANNEL_A 4
 #define PIN_GPIO_CHANNEL_B 18
-#define bleServerName "ESP32 Gate Opener BtServer"
+#define SERVER_NAME "ESP32 Gate Opener BtServer"
 #define SERVICE_UUID "bc5d00ca-badf-4244-ae11-4a8f73fd409f"
 #define CHARACTERISTIC_UUID_CHANNEL_A "1dd23185-5d48-457c-a5e4-0f21afed2e58"
 #define CHARACTERISTIC_UUID_CHANNEL_B "04889dda-9528-45fb-ac11-f522997afb0b"
 #define CHARACTERISTIC_VALUE_LOW "0"
 #define CHARACTERISTIC_VALUE_HIGH "1"
-#define DELTA_TIME_CONN_LED_BLINK 80
-#define DELTA_TIME_MS 250
+#define DELTA_TIME_MS_CONN_LED_BLINK 80
+#define DELTA_TIME_MS_READ_VALUES 250
 
-unsigned long lastTimeRead = 0;  // ms
+unsigned long lastTimeReadMs = 0;
 bool deviceConnected = false;
 bool isAdvertising = false;
 
@@ -33,11 +33,11 @@ void setup() {
 
 void loop() {
     if (deviceConnected) {
-        if ((millis() - lastTimeRead) > DELTA_TIME_MS) {
+        if ((millis() - lastTimeReadMs) > DELTA_TIME_MS_READ_VALUES) {
             std::string valueA = pCharacteristicA->getValue();
             std::string valueB = pCharacteristicB->getValue();
             setupOutputAndNotify(valueA, valueB);
-            lastTimeRead = millis();
+            lastTimeReadMs = millis();
         }
     } else if (isAdvertising) {
         onAdvertising();
@@ -55,9 +55,9 @@ void setupBleAdvertising() {
 }
 
 void onAdvertising() {
-    delay(DELTA_TIME_CONN_LED_BLINK);
+    delay(DELTA_TIME_MS_CONN_LED_BLINK);
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
-    delay(DELTA_TIME_CONN_LED_BLINK);
+    delay(DELTA_TIME_MS_CONN_LED_BLINK);
     digitalWrite(PIN_GPIO_CONN_LED, HIGH);
 }
 
@@ -112,7 +112,7 @@ class ServerCallbacks : public BLEServerCallbacks {
 };
 
 void setupBleServer() {
-    BLEDevice::init(bleServerName);
+    BLEDevice::init(SERVER_NAME);
 
     BLEServer* pServer;
     BLEService* pService;
