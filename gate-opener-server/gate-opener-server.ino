@@ -67,7 +67,6 @@ void setupOutputAndNotify(std::string valueA, std::string valueB) {
     pCharacteristicB->notify();
 }
 
-// TODO: avoid str convert!
 void setGpioValues(std::string valueA, std::string valueB) {
     String valueAStr = valueA.c_str();
     String valueBStr = valueB.c_str();
