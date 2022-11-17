@@ -9,8 +9,8 @@
 #define SERVICE_UUID "bc5d00ca-badf-4244-ae11-4a8f73fd409f"
 #define CHARACTERISTIC_UUID_CHANNEL_A "1dd23185-5d48-457c-a5e4-0f21afed2e58"
 #define CHARACTERISTIC_UUID_CHANNEL_B "04889dda-9528-45fb-ac11-f522997afb0b"
-#define CHARACTERISTIC_VALUE_LOW "0"
-#define CHARACTERISTIC_VALUE_HIGH "1"
+#define SIG_OFF "SIG_OFF"
+#define SIG_ON "SIG_ON"
 #define DELTA_TIME_MS_CONN_LED_BLINK 80
 #define DELTA_TIME_MS_READ_VALUES 250
 
@@ -28,7 +28,7 @@ void setup() {
     pinMode(PIN_GPIO_CHANNEL_B, OUTPUT);
     setupBleServer();
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
-    setGpioValues(CHARACTERISTIC_VALUE_LOW, CHARACTERISTIC_VALUE_LOW);
+    setGpioValues(SIG_OFF, SIG_OFF);
 }
 
 void loop() {
@@ -86,7 +86,7 @@ void setGpioValues(std::string valueA, std::string valueB) {
 
 byte getPinOutput(String characteristicValue) {
     byte output = LOW;
-    if (characteristicValue == CHARACTERISTIC_VALUE_HIGH) {
+    if (characteristicValue == SIG_ON) {
         output = HIGH;
     }
     return output;
@@ -105,7 +105,7 @@ class ServerCallbacks : public BLEServerCallbacks {
         Serial.println("Device Disonnected!");
         deviceConnected = false;
         digitalWrite(PIN_GPIO_CONN_LED, LOW);
-        setGpioValues(CHARACTERISTIC_VALUE_LOW, CHARACTERISTIC_VALUE_LOW);
+        setGpioValues(SIG_OFF, SIG_OFF);
         pServer->getAdvertising()->start();
         isAdvertising = true;
     }
@@ -122,9 +122,9 @@ void setupBleServer() {
 
     pService = pServer->createService(SERVICE_UUID);
     pCharacteristicA = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_A, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-    pCharacteristicA->setValue(CHARACTERISTIC_VALUE_LOW);
+    pCharacteristicA->setValue(SIG_OFF);
     pCharacteristicB = pService->createCharacteristic(CHARACTERISTIC_UUID_CHANNEL_B, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE);
-    pCharacteristicB->setValue(CHARACTERISTIC_VALUE_LOW);
+    pCharacteristicB->setValue(SIG_OFF);
     pService->start();
 
     setupBleAdvertising();
