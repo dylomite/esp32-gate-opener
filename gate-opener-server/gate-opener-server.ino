@@ -19,6 +19,9 @@
 unsigned long lastTimeReadMs = 0;
 bool deviceConnected = false;
 bool isAdvertising = false;
+//Protection mechanism
+long aHighSince = 0;
+long bHighSince = 0;
 
 BLECharacteristic* pCharacteristicA;
 BLECharacteristic* pCharacteristicB;
@@ -38,10 +41,6 @@ void setup() {
     initOutputValueAndNotify(LOW, LOW);
 }
 
-unsigned long aHighSince = 0;//TODO: rm unsigned
-unsigned long bHighSince = 0;//TODO: impl
-
-
 void loop() {
     if (deviceConnected) {
         if ((millis() - lastTimeReadMs) > DELTA_TIME_MS_READ_VALUES) {
@@ -51,8 +50,7 @@ void loop() {
             Serial.print(outputA);
             Serial.print(" outputB = ");
             Serial.println(outputB);
-            //TODO: ALSO IMPL B
-
+        
             setupHighSinceDeltaT(outputA,&aHighSince);
             setupHighSinceDeltaT(outputB,&bHighSince);
 
@@ -75,7 +73,7 @@ void loop() {
     }
 }
 
-void setupHighSinceDeltaT(byte outputA, unsigned long *highSince){
+void setupHighSinceDeltaT(byte outputA, long *highSince){
   if (outputA == HIGH) {
       *highSince += DELTA_TIME_MS_READ_VALUES;
   } else {
@@ -83,7 +81,7 @@ void setupHighSinceDeltaT(byte outputA, unsigned long *highSince){
   }
 }
 
-void onForceLowSig(BLECharacteristic* characteristic,byte *output,unsigned long *highSince){
+void onForceLowSig(BLECharacteristic* characteristic, byte *output, long *highSince){
     characteristic->setValue(SIG_OFF);
     output = LOW;
     highSince = 0;
