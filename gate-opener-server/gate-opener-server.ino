@@ -12,7 +12,9 @@
 #define SIG_OFF "SIG_OFF"
 #define SIG_ON "SIG_ON"
 #define DELTA_TIME_MS_CONN_LED_BLINK 80
-#define DELTA_TIME_MS_READ_VALUES 250
+#define DELTA_TIME_MS_READ_VALUES 100
+#define MAX_HIGH_FOR_MS_VALUE 1500
+
 
 unsigned long lastTimeReadMs = 0;
 bool deviceConnected = false;
@@ -36,7 +38,9 @@ void setup() {
     initOutputValueAndNotify(LOW, LOW);
 }
 
-unsigned long aHighSince = 0;
+unsigned long aHighSince = 0;//TODO: rm unsigned
+unsigned long bHighSince = 0;//TODO: impl
+
 
 void loop() {
     if (deviceConnected) {
@@ -49,24 +53,46 @@ void loop() {
             Serial.println(outputB);
             //TODO: ALSO IMPL B
 
-            if (outputA == HIGH) {
-                aHighSince += DELTA_TIME_MS_READ_VALUES;
-            } else {
-                aHighSince = 0;
-            }
+            setupHighSinceDeltaT(outputA,&aHighSince);
+     
 
-            if(aHighSince>2000){
-                pCharacteristicA->setValue(SIG_OFF);
-                outputA = LOW;
-                aHighSince = 0;
+            if(aHighSince>MAX_HIGH_FOR_MS_VALUE){
+              onForceLowSig(pCharacteristicA, &outputA, &aHighSince);
             }
+            
             digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
+            pCharacteristicA->notify();
 
             lastTimeReadMs = millis();
         }
     } else if (isAdvertising) {
         onAdvertising();
     }
+}
+
+void setupHighSinceDeltaT(byte outputA, unsigned long *highSince){
+  if (outputA == HIGH) {
+      *highSince += DELTA_TIME_MS_READ_VALUES;
+  } else {
+      *highSince = 0;
+  }
+}
+
+void onForceLowSig(BLECharacteristic* characteristic,byte *output,unsigned long *highSince){
+    characteristic->setValue(SIG_OFF);
+    output = LOW;
+    highSince = 0;
+}
+
+byte readCharacteristicValue(BLECharacteristic* characteristic) {
+    std::string readValue = characteristic->getValue();
+    String valueStr = readValue.c_str();
+    byte output = getPinOutputValue(valueStr);
+    return output;
+}
+
+byte getPinOutputValue(String characteristicValue) {
+    return characteristicValue == SIG_ON ? HIGH : LOW;
 }
 
 void setupBleAdvertising() {
@@ -84,55 +110,6 @@ void onAdvertising() {
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
     delay(DELTA_TIME_MS_CONN_LED_BLINK);
     digitalWrite(PIN_GPIO_CONN_LED, HIGH);
-}
-
-void initOutputValueAndNotify(byte outputB, byte outputA) {
-    digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
-    pCharacteristicA->notify();
-    digitalWrite(PIN_GPIO_CHANNEL_B, outputB);
-    pCharacteristicB->notify();
-}
-
-/*
-void onProtectionMode(bool isAHigh, bool isBHigh) {
-    unsigned long lastTimeReadMs = millis();
-    unsigned long channelAHighSinceMs = isAHigh ? 2000 : 0;
-    unsigned long channelBHighSinceMs = isBHigh ? 2000 : 0;
-
-
-    while (channelAHighSinceMs > 0) {
-        if ((millis() - lastTimeReadMs) > DELTA_TIME_MS_READ_VALUES) {
-
-            byte outputA = readCharacteristicValue(pCharacteristicA);
-            byte outputB = readCharacteristicValue(pCharacteristicB);
-
-            if (outputA == LOW) {
-                digitalWrite(PIN_GPIO_CHANNEL_A, LOW);
-                pCharacteristicA->notify();
-            }
-            if (outputB == LOW) {
-                digitalWrite(PIN_GPIO_CHANNEL_B, LOW);
-                pCharacteristicB->notify();
-            }
-
-        } else {
-            output = LOW
-        }
-        channelAHighSinceMs -= DELTA_TIME_MS_READ_VALUES;
-    }
-    lastTimeReadMs = millis();
-}
-*/
-
-byte readCharacteristicValue(BLECharacteristic* characteristic) {
-    std::string readValue = characteristic->getValue();
-    String valueStr = readValue.c_str();
-    byte output = getPinOutputValue(valueStr);
-    return output;
-}
-
-byte getPinOutputValue(String characteristicValue) {
-    return characteristicValue == SIG_ON ? HIGH : LOW;
 }
 
 // Setup BLEServerCallbacks
@@ -171,4 +148,12 @@ void setupBleServer() {
     pService->start();
 
     setupBleAdvertising();
+}
+
+//TODO: rm this?
+void initOutputValueAndNotify(byte outputB, byte outputA) {
+    digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
+    pCharacteristicA->notify();
+    digitalWrite(PIN_GPIO_CHANNEL_B, outputB);
+    pCharacteristicB->notify();
 }
