@@ -17,8 +17,6 @@
 unsigned long lastTimeReadMs = 0;
 bool deviceConnected = false;
 bool isAdvertising = false;
-unsigned long channelAHighSinceMs = 0;
-unsigned long channelBHighSinceMs = 0;
 
 BLECharacteristic* pCharacteristicA;
 BLECharacteristic* pCharacteristicB;
@@ -32,21 +30,37 @@ void setup() {
     lastTimeReadMs = 0;
     deviceConnected = false;
     isAdvertising = false;
-    channelAHighSinceMs = 0;
-    channelBHighSinceMs = 0;
 
     setupBleServer();
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
-    setGpioValues(SIG_OFF, SIG_OFF);
+    initOutputValueAndNotify(LOW, LOW);
 }
+
+unsigned long aHighSince = 0;
 
 void loop() {
     if (deviceConnected) {
         if ((millis() - lastTimeReadMs) > DELTA_TIME_MS_READ_VALUES) {
-            std::string valueA = pCharacteristicA->getValue();
-            std::string valueB = pCharacteristicB->getValue();
+            byte outputA = readCharacteristicValue(pCharacteristicA);
+            byte outputB = readCharacteristicValue(pCharacteristicB);
+            Serial.print("outputA = ");
+            Serial.print(outputA);
+            Serial.print(" outputB = ");
+            Serial.println(outputB);
+            //TODO: ALSO IMPL B
 
-            setGpioValues(valueA, valueB);
+            if (outputA == HIGH) {
+                aHighSince += DELTA_TIME_MS_READ_VALUES;
+            } else {
+                aHighSince = 0;
+            }
+
+            if(aHighSince>2000){
+                pCharacteristicA->setValue(SIG_OFF);
+                outputA = LOW;
+                aHighSince = 0;
+            }
+            digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
 
             lastTimeReadMs = millis();
         }
@@ -72,43 +86,53 @@ void onAdvertising() {
     digitalWrite(PIN_GPIO_CONN_LED, HIGH);
 }
 
-void setGpioValues(std::string valueA, std::string valueB) {
-    String valueAStr = valueA.c_str();
-    String valueBStr = valueB.c_str();
-
-    Serial.print("valueA = ");
-    Serial.print(valueAStr);
-    Serial.print(" valueB = ");
-    Serial.println(valueBStr);
-
-    byte outputA = getPinOutputValue(valueAStr, channelAHighSinceMs);
-    byte outputB = getPinOutputValue(valueBStr, channelBHighSinceMs);
-
+void initOutputValueAndNotify(byte outputB, byte outputA) {
     digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
     pCharacteristicA->notify();
-    if (outputA == HIGH) {
-        channelAHighSinceMs = millis();
-    } else {
-        channelAHighSinceMs = 0;
-    }
-
     digitalWrite(PIN_GPIO_CHANNEL_B, outputB);
     pCharacteristicB->notify();
-    if (outputB == HIGH) {
-        channelBHighSinceMs = millis();
-    } else {
-        channelBHighSinceMs = 0;
-    }
 }
 
-byte getPinOutputValue(String characteristicValue, unsigned long* channelHighSinceMs) {
-    byte output;
-    if (((millis() - channelHighSinceMs) > 1000)) {
-        output = LOW
-    } else {
-        output = characteristicValue == SIG_ON ? HIGH : LOW;
+/*
+void onProtectionMode(bool isAHigh, bool isBHigh) {
+    unsigned long lastTimeReadMs = millis();
+    unsigned long channelAHighSinceMs = isAHigh ? 2000 : 0;
+    unsigned long channelBHighSinceMs = isBHigh ? 2000 : 0;
+
+
+    while (channelAHighSinceMs > 0) {
+        if ((millis() - lastTimeReadMs) > DELTA_TIME_MS_READ_VALUES) {
+
+            byte outputA = readCharacteristicValue(pCharacteristicA);
+            byte outputB = readCharacteristicValue(pCharacteristicB);
+
+            if (outputA == LOW) {
+                digitalWrite(PIN_GPIO_CHANNEL_A, LOW);
+                pCharacteristicA->notify();
+            }
+            if (outputB == LOW) {
+                digitalWrite(PIN_GPIO_CHANNEL_B, LOW);
+                pCharacteristicB->notify();
+            }
+
+        } else {
+            output = LOW
+        }
+        channelAHighSinceMs -= DELTA_TIME_MS_READ_VALUES;
     }
+    lastTimeReadMs = millis();
+}
+*/
+
+byte readCharacteristicValue(BLECharacteristic* characteristic) {
+    std::string readValue = characteristic->getValue();
+    String valueStr = readValue.c_str();
+    byte output = getPinOutputValue(valueStr);
     return output;
+}
+
+byte getPinOutputValue(String characteristicValue) {
+    return characteristicValue == SIG_ON ? HIGH : LOW;
 }
 
 // Setup BLEServerCallbacks
@@ -124,7 +148,7 @@ class ServerCallbacks : public BLEServerCallbacks {
         Serial.println("Device Disonnected!");
         deviceConnected = false;
         digitalWrite(PIN_GPIO_CONN_LED, LOW);
-        setGpioValues(SIG_OFF, SIG_OFF);
+        initOutputValueAndNotify(LOW, LOW);
         pServer->getAdvertising()->start();
         isAdvertising = true;
     }
