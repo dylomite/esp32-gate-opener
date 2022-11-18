@@ -35,10 +35,13 @@ void setup() {
     lastTimeReadMs = 0;
     deviceConnected = false;
     isAdvertising = false;
+    aHighSince = 0;
+    bHighSince = 0;
 
     setupBleServer();
     digitalWrite(PIN_GPIO_CONN_LED, LOW);
-    initOutputValueAndNotify(LOW, LOW);
+    onSetOutput(pCharacteristicA, PIN_GPIO_CHANNEL_A, LOW);
+    onSetOutput(pCharacteristicB, PIN_GPIO_CHANNEL_B, LOW);
 }
 
 void loop() {
@@ -103,12 +106,6 @@ void onSetOutput(BLECharacteristic* characteristic,int pinGpio,byte output){
     characteristic->notify();
 }
 
-//TODO: rm this!
-void initOutputValueAndNotify(byte outputB, byte outputA) {
-  onSetOutput(pCharacteristicA,PIN_GPIO_CHANNEL_A,outputA);
-  onSetOutput(pCharacteristicB,PIN_GPIO_CHANNEL_B,outputB);
-}
-
 void setupBleAdvertising() {
     BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(SERVICE_UUID);
@@ -139,7 +136,8 @@ class ServerCallbacks : public BLEServerCallbacks {
         Serial.println("Device Disonnected!");
         deviceConnected = false;
         digitalWrite(PIN_GPIO_CONN_LED, LOW);
-        initOutputValueAndNotify(LOW, LOW);
+        onSetOutput(pCharacteristicA, PIN_GPIO_CHANNEL_A, LOW);
+        onSetOutput(pCharacteristicB, PIN_GPIO_CHANNEL_B, LOW);
         pServer->getAdvertising()->start();
         isAdvertising = true;
     }
