@@ -54,14 +54,19 @@ void loop() {
             //TODO: ALSO IMPL B
 
             setupHighSinceDeltaT(outputA,&aHighSince);
-     
+            setupHighSinceDeltaT(outputB,&bHighSince);
 
+            //CHANNEL A
             if(aHighSince>MAX_HIGH_FOR_MS_VALUE){
               onForceLowSig(pCharacteristicA, &outputA, &aHighSince);
             }
-            
-            digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
-            pCharacteristicA->notify();
+            onSetOutput(pCharacteristicA,PIN_GPIO_CHANNEL_A,outputA);
+
+            //CHANNEL B
+            if(bHighSince>MAX_HIGH_FOR_MS_VALUE){
+              onForceLowSig(pCharacteristicB, &outputB, &bHighSince);
+            }
+            onSetOutput(pCharacteristicB,PIN_GPIO_CHANNEL_B,outputB);
 
             lastTimeReadMs = millis();
         }
@@ -93,6 +98,17 @@ byte readCharacteristicValue(BLECharacteristic* characteristic) {
 
 byte getPinOutputValue(String characteristicValue) {
     return characteristicValue == SIG_ON ? HIGH : LOW;
+}
+
+void onSetOutput(BLECharacteristic* characteristic,int pinGpio,byte output){
+    digitalWrite(pinGpio, output);
+    characteristic->notify();
+}
+
+//TODO: rm this!
+void initOutputValueAndNotify(byte outputB, byte outputA) {
+  onSetOutput(pCharacteristicA,PIN_GPIO_CHANNEL_A,outputA);
+  onSetOutput(pCharacteristicB,PIN_GPIO_CHANNEL_B,outputB);
 }
 
 void setupBleAdvertising() {
@@ -148,12 +164,4 @@ void setupBleServer() {
     pService->start();
 
     setupBleAdvertising();
-}
-
-//TODO: rm this?
-void initOutputValueAndNotify(byte outputB, byte outputA) {
-    digitalWrite(PIN_GPIO_CHANNEL_A, outputA);
-    pCharacteristicA->notify();
-    digitalWrite(PIN_GPIO_CHANNEL_B, outputB);
-    pCharacteristicB->notify();
 }
